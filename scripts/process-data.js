@@ -15,13 +15,15 @@
  *   static/data/accidents.geojson   — quantized GeoJSON (production)
  */
 
-import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUTPUT_DIR = join(__dirname, '..', 'public', 'data');
+const OUTPUT_DIR = join(__dirname, '..', 'static', 'data');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'accidents.geojson');
+const START_DATE = new Date('1985-01-01T00:00:00Z');
+const END_DATE = new Date('2026-03-28T23:59:59Z');
 
 // Precision for quantized coordinates (4 decimal places ≈ 11m accuracy)
 const COORD_PRECISION = 4;
@@ -54,7 +56,9 @@ async function fetchNTSBData() {
       'Latitude', 'Longitude', 'AirportId', 'AirportName',
       'AircraftDamage', 'AircraftMakeModel', 'InjurySeverity',
       'TotalFatalInjuries', 'TotalSeriousInjuries',
-      'WeatherCondition', 'BroadPhaseOfFlight', 'ProbableCause'
+      'TotalMinorInjuries', 'TotalUninjured',
+      'WeatherCondition', 'BroadPhaseOfFlight', 'ProbableCause',
+      'OperatorName', 'RegistrationNumber'
     ],
     StartRow: 0,
     RowCount: 100000
@@ -86,17 +90,30 @@ function toGeoJSON(rows) {
     if (!isFinite(lat) || !isFinite(lng)) continue;
     if (lat === 0 && lng === 0) continue;
 
-    const date = row.EventDate ?? '';
-    const year = date ? new Date(date).getFullYear() : null;
-    if (!year || year < 1982) continue;
+    const rawDate = row.EventDate ?? '';
+    const eventDate = rawDate ? new Date(rawDate) : null;
+    if (!eventDate || Number.isNaN(eventDate.getTime())) continue;
+    if (eventDate < START_DATE || eventDate > END_DATE) continue;
+    const year = eventDate.getUTCFullYear();
 
     const fatals = parseInt(row.TotalFatalInjuries ?? '0', 10) || 0;
     const serious = parseInt(row.TotalSeriousInjuries ?? '0', 10) || 0;
+    const minor = parseInt(row.TotalMinorInjuries ?? '0', 10) || 0;
+    const uninjured = parseInt(row.TotalUninjured ?? '0', 10) || 0;
 
     let severity;
     if (fatals > 0)       severity = 'fatal';
     else if (serious > 0) severity = 'serious';
     else                  severity = 'minor';
+
+    const cause = `${row.ProbableCause ?? ''}`.trim();
+    const injurySummary = [
+      `${fatals} fatal`,
+      `${serious} serious`,
+      `${minor} minor`,
+      `${uninjured} uninjured`
+    ].join(', ');
+    const description = cause || `Injury summary: ${injurySummary}`;
 
     features.push({
       type: 'Feature',
@@ -105,27 +122,43 @@ function toGeoJSON(rows) {
         coordinates: [quantize(lng), quantize(lat)]
       },
       properties: {
-        id:       row.NtsbNo,
-        date:     date.slice(0, 10),
+        id:       row.NtsbNo || `${eventDate.toISOString().slice(0, 10)}-${quantize(lat)}-${quantize(lng)}`,
+        date:     eventDate.toISOString().slice(0, 10),
         year,
         city:     row.City ?? '',
         state:    row.State ?? '',
         country:  row.Country ?? '',
         aircraft: row.AircraftMakeModel ?? '',
+        operator: row.OperatorName ?? '',
+        registration: row.RegistrationNumber ?? '',
+        airportId: row.AirportId ?? '',
+        airportName: row.AirportName ?? '',
         damage:   row.AircraftDamage ?? '',
         severity,
         fatals,
         serious,
+        minor,
+        uninjured,
         weather:  row.WeatherCondition ?? '',
         phase:    row.BroadPhaseOfFlight ?? '',
-        cause:    (row.ProbableCause ?? '').slice(0, 200)
+        cause:    cause.slice(0, 1200),
+        description: description.slice(0, 1200)
       }
     });
   }
 
+  const uniqueFeatures = Array.from(
+    new Map(
+      features.map((feature) => {
+        const key = `${feature.properties.id}::${feature.properties.date}::${feature.geometry.coordinates.join(',')}`;
+        return [key, feature];
+      })
+    ).values()
+  ).sort((a, b) => b.properties.date.localeCompare(a.properties.date));
+
   return {
     type: 'FeatureCollection',
-    features
+    features: uniqueFeatures
   };
 }
 

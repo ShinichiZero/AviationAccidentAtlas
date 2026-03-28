@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { get } from 'svelte/store';
   import { mapZoom, mapCenter, selectedId, filteredAccidents, filterAircraft, filterCause } from '$lib/stores/filters.js';
   import { env } from '$env/dynamic/public';
 
@@ -24,6 +25,18 @@
     minor:   '#3b82f6'
   };
 
+  const FALLBACK_STYLE = {
+    version: 8,
+    sources: {},
+    layers: [
+      {
+        id: 'background',
+        type: 'background',
+        paint: { 'background-color': '#020617' }
+      }
+    ]
+  };
+
   // ── Reactive: rebuild source data when filtered set changes ───────────────
   let unsubscribe;
 
@@ -40,9 +53,14 @@
     const apiKey = env.PUBLIC_MAPTILER_API_KEY ?? import.meta.env.VITE_MAPTILER_API_KEY ?? '';
     config.apiKey = apiKey;
 
+    const hasApiKey = Boolean(apiKey?.trim());
+    const style = hasApiKey
+      ? `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${apiKey}`
+      : FALLBACK_STYLE;
+
     map = new Map({
       container: mapContainer,
-      style: 'https://api.maptiler.com/maps/dataviz-dark/style.json' + (apiKey ? `?key=${apiKey}` : ''),
+      style,
       center: [$mapCenter.lng, $mapCenter.lat],
       zoom: $mapZoom,
       projection: 'globe',        // 🌍 Enable globe projection
@@ -55,13 +73,15 @@
 
     map.on('load', () => {
       // Add atmosphere / space background for the globe
-      map.setFog({
-        color: 'rgb(10, 15, 30)',
-        'high-color': 'rgb(30, 50, 120)',
-        'horizon-blend': 0.04,
-        'space-color': 'rgb(0, 0, 20)',
-        'star-intensity': 0.6
-      });
+      if (typeof map.setFog === 'function') {
+        map.setFog({
+          color: 'rgb(10, 15, 30)',
+          'high-color': 'rgb(30, 50, 120)',
+          'horizon-blend': 0.04,
+          'space-color': 'rgb(0, 0, 20)',
+          'star-intensity': 0.6
+        });
+      }
 
       // Initialise empty GeoJSON sources
       map.addSource(SOURCE_ID, {
@@ -100,19 +120,21 @@
         }
       });
 
-      // Cluster count labels
-      map.addLayer({
-        id: COUNT_ID,
-        type: 'symbol',
-        source: SOURCE_ID,
-        filter: ['has', 'point_count'],
-        layout: {
-          'text-field': '{point_count_abbreviated}',
-          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-          'text-size': 12
-        },
-        paint: { 'text-color': '#000000' }
-      });
+      // Cluster count labels (requires glyphs from a hosted style)
+      if (hasApiKey) {
+        map.addLayer({
+          id: COUNT_ID,
+          type: 'symbol',
+          source: SOURCE_ID,
+          filter: ['has', 'point_count'],
+          layout: {
+            'text-field': '{point_count_abbreviated}',
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-size': 12
+          },
+          paint: { 'text-color': '#000000' }
+        });
+      }
 
       // Individual accident points
       map.addLayer({
@@ -170,12 +192,17 @@
         mapZoom.set(map.getZoom());
       });
 
-      // Subscribe to filtered data
-      unsubscribe = filteredAccidents.subscribe((features) => {
+      const updateSourceData = (features) => {
         const source = map.getSource(SOURCE_ID);
         if (!source) return;
         source.setData({ type: 'FeatureCollection', features });
-      });
+      };
+
+      // Ensure source receives the latest available data immediately
+      updateSourceData(get(filteredAccidents));
+
+      // Subscribe to filtered data
+      unsubscribe = filteredAccidents.subscribe(updateSourceData);
     });
   });
 
