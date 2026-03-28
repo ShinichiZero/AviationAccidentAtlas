@@ -2,7 +2,7 @@
   import { yearRange, currentYear } from '$lib/stores/filters.js';
   import { MILESTONES, isMilestone, hapticPulse } from '$lib/data/milestones.js';
 
-  const MIN_YEAR = 1982;
+  const MIN_YEAR = 1985;
   const MAX_YEAR = new Date().getFullYear();
 
   let isDragging = false;

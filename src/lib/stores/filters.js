@@ -1,7 +1,7 @@
 import { writable, derived } from 'svelte/store';
 
 // ── Year range filter ──────────────────────────────────────────────────────
-export const yearRange = writable({ min: 1982, max: new Date().getFullYear() });
+export const yearRange = writable({ min: 1985, max: new Date().getFullYear() });
 export const currentYear = writable(new Date().getFullYear());
 
 // ── Text / attribute filters ───────────────────────────────────────────────

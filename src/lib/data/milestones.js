@@ -6,8 +6,6 @@
  * distinctive pattern so the user "feels" the milestone.
  */
 export const MILESTONES = {
-  1982: 'Air Florida 90 — Potomac River crash',
-  1983: 'Korean Air 007 — Soviet shoot-down',
   1985: 'Japan Air 123 — deadliest single-aircraft accident',
   1988: 'Pan Am 103 — Lockerbie bombing',
   1989: 'United 232 — Sioux City hydraulic failure',

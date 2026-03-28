@@ -7,6 +7,7 @@
     : null;
 
   $: p = selected?.properties ?? null;
+  $: coords = selected?.geometry?.coordinates ?? null;
 
   function dismiss() {
     selectedId.set(null);
@@ -57,9 +58,19 @@
         <dt>Damage</dt>
         <dd>{p.damage || '—'}</dd>
       </div>
+      {#if coords?.length === 2}
+        <div class="dl-row">
+          <dt>Location</dt>
+          <dd>{coords[1].toFixed(4)}, {coords[0].toFixed(4)}</dd>
+        </div>
+      {/if}
     </dl>
 
-    {#if p.cause}
+    {#if p.description || p.cause}
+      <p class="cause"><strong>Description:</strong> {p.description || p.cause}</p>
+    {/if}
+
+    {#if p.cause && p.description !== p.cause}
       <p class="cause"><strong>Probable Cause:</strong> {p.cause}</p>
     {/if}
   </div>

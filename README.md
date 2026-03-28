@@ -1,6 +1,6 @@
 # ✈ Aviation Accident Atlas
 
-An interactive 4D globe visualising NTSB aviation accident data from 1982 to the present.
+An interactive 4D globe visualising aviation incidents from 1985 to 28 March 2026.
 
 **Live:** https://aviationaccidentatlas.shinichizero.github.io/
 
@@ -80,9 +80,21 @@ npm run build
 
 ## Data
 
-Accident data is sourced from the **NTSB CAROL (Crash Analyzable Reporting On-Line) database**.  
+Accident data is sourced from the **NTSB CAROL (Crash Analyzable Reporting On-Line) database**.
 The `scripts/process-data.js` script fetches from the NTSB Query API and outputs
-a quantized GeoJSON to `static/data/accidents.geojson`.
+quantized GeoJSON to `static/data/accidents.geojson`.
+
+Each incident includes:
+- date and year
+- latitude/longitude (for map location)
+- city/state/country
+- aircraft model, operator, registration
+- airport ID/name (when available)
+- injury totals (fatal/serious/minor/uninjured)
+- weather, phase of flight, damage
+- `description` and `cause` text
+
+The generated dataset is intentionally bounded to **1985-01-01 through 2026-03-28**.
 
 A **GitHub Action** runs on the 1st of each month to pull the latest monthly updates.
 

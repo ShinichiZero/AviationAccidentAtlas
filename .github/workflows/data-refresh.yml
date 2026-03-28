@@ -32,14 +32,14 @@ jobs:
       - name: Check for changes
         id: diff
         run: |
-          git diff --quiet public/data/accidents.geojson || echo "changed=true" >> $GITHUB_OUTPUT
+          git diff --quiet static/data/accidents.geojson || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit & push updated data
         if: steps.diff.outputs.changed == 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/accidents.geojson
+          git add static/data/accidents.geojson
           git commit -m "chore: monthly NTSB data refresh [skip ci]"
           git push
 
