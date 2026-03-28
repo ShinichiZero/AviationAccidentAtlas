@@ -1,12 +1,11 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
-  import { mapZoom, mapCenter, selectedId, filteredAccidents, filterAircraft, filterCause } from '$lib/stores/filters.js';
+  import { mapZoom, mapCenter, selectedId, filteredAccidents } from '$lib/stores/filters.js';
 
   let mapContainer;
   let map;
-  let supercluster;
-  let ScLib; // supercluster constructor
+  let mapError = '';
 
   // ── Props ──────────────────────────────────────────────────────────────────
   /** @type {import('svelte').Snippet} */
@@ -41,19 +40,13 @@
 
   onMount(async () => {
     // Dynamic imports so MapTiler SDK isn't bundled in SSR
-    const [{ Map, config, MapStyle }, SC] = await Promise.all([
-      import('@maptiler/sdk'),
-      import('supercluster')
-    ]);
+    const { Map, config } = await import('@maptiler/sdk');
 
-    ScLib = SC.default ?? SC;
-
-    // Obfuscated key to avoid simple repository scrapers
-    const mtk = 'RXdzY3RDNm9xeUVWNWR4SzVQaHk=';
-    const apiKey = import.meta.env.VITE_MAPTILER_API_KEY || (typeof window !== 'undefined' ? atob(mtk) : '');
+    const apiKey = import.meta.env.VITE_MAPTILER_API_KEY ?? '';
     config.apiKey = apiKey;
 
     const hasApiKey = Boolean(apiKey?.trim());
+    mapError = hasApiKey ? '' : 'Map style unavailable: missing VITE_MAPTILER_API_KEY. Configure MAPTILER_API_KEY in GitHub Actions secrets.';
     const style = hasApiKey
       ? `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${apiKey}`
       : FALLBACK_STYLE;
@@ -176,6 +169,11 @@
       map.on('click', POINT_ID, (e) => {
         const f = e.features[0];
         selectedId.set(f.properties.id);
+        map.easeTo({
+          center: f.geometry.coordinates,
+          zoom: Math.max(map.getZoom(), 5),
+          duration: 700
+        });
         onAccidentSelect(f);
       });
 
@@ -213,6 +211,9 @@
 </script>
 
 <div bind:this={mapContainer} class="globe-container" aria-label="Aviation accident globe map"></div>
+{#if mapError}
+  <div class="map-error" role="alert">{mapError}</div>
+{/if}
 
 <style>
   .globe-container {
@@ -220,5 +221,21 @@
     inset: 0;
     width: 100%;
     height: 100%;
+  }
+
+  .map-error {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 120;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #fecaca;
+    font-size: 0.8rem;
+    max-width: min(92vw, 720px);
+    text-align: center;
   }
 </style>
