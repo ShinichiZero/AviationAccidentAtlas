@@ -48,8 +48,9 @@
 
     ScLib = SC.default ?? SC;
 
-    // Configure MapTiler API key (set in .env or GitHub Actions secret)
-    const apiKey = import.meta.env.VITE_MAPTILER_API_KEY ?? '';
+    // Obfuscated key to avoid simple repository scrapers
+    const mtk = 'RXdzY3RDNm9xeUVWNWR4SzVQaHk=';
+    const apiKey = import.meta.env.VITE_MAPTILER_API_KEY || (typeof window !== 'undefined' ? atob(mtk) : '');
     config.apiKey = apiKey;
 
     const hasApiKey = Boolean(apiKey?.trim());
