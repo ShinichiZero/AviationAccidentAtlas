@@ -2,7 +2,7 @@
 
 An interactive 4D globe visualising aviation incidents from 1985 to 28 March 2026.
 
-**Live:** https://aviationaccidentatlas.shinichizero.github.io/
+**Live:** https://shinichizero.github.io/AviationAccidentAtlas/
 
 ---
 
@@ -37,7 +37,7 @@ An interactive 4D globe visualising aviation incidents from 1985 to 28 March 202
 
 - Node.js ≥ 20
 - A free [MapTiler API key](https://cloud.maptiler.com/) (100 k requests/month free)
-  - Restrict the key origin to `https://aviationaccidentatlas.shinichizero.github.io`
+  - Restrict the key origin to `https://shinichizero.github.io`
 
 ### Local Development
 
