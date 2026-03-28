@@ -8,6 +8,8 @@
 
   $: p = selected?.properties ?? null;
   $: coords = selected?.geometry?.coordinates ?? null;
+  $: description = `${p?.description ?? ''}`.trim();
+  $: cause = `${p?.cause ?? ''}`.trim();
 
   function dismiss() {
     selectedId.set(null);
@@ -66,12 +68,12 @@
       {/if}
     </dl>
 
-    {#if p.description || p.cause}
-      <p class="cause"><strong>Description:</strong> {p.description || p.cause}</p>
+    {#if description}
+      <p class="cause"><strong>Description:</strong> {description}</p>
     {/if}
 
-    {#if p.cause && p.description !== p.cause}
-      <p class="cause"><strong>Probable Cause:</strong> {p.cause}</p>
+    {#if cause && cause !== description}
+      <p class="cause"><strong>Probable Cause:</strong> {cause}</p>
     {/if}
   </div>
 {/if}
