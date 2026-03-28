@@ -1,0 +1,48 @@
+name: Monthly NTSB Data Refresh
+
+on:
+  schedule:
+    # Run on the 1st of every month at 06:00 UTC
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download latest NTSB data
+        run: node scripts/process-data.js
+
+      - name: Check for changes
+        id: diff
+        run: |
+          git diff --quiet public/data/accidents.geojson || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit & push updated data
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/accidents.geojson
+          git commit -m "chore: monthly NTSB data refresh [skip ci]"
+          git push
+
+      - name: No changes detected
+        if: steps.diff.outputs.changed != 'true'
+        run: echo "No new NTSB data found — skipping commit."
