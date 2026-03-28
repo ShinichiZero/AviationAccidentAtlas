@@ -2,7 +2,6 @@
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { mapZoom, mapCenter, selectedId, filteredAccidents, filterAircraft, filterCause } from '$lib/stores/filters.js';
-  import { env } from '$env/dynamic/public';
 
   let mapContainer;
   let map;
@@ -50,7 +49,7 @@
     ScLib = SC.default ?? SC;
 
     // Configure MapTiler API key (set in .env or GitHub Actions secret)
-    const apiKey = env.PUBLIC_MAPTILER_API_KEY ?? import.meta.env.VITE_MAPTILER_API_KEY ?? '';
+    const apiKey = import.meta.env.VITE_MAPTILER_API_KEY ?? '';
     config.apiKey = apiKey;
 
     const hasApiKey = Boolean(apiKey?.trim());
